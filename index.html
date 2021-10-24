@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+
+    <title>ToDo Crud Application</title>
+  </head>
+  <body>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-2"></div>
+            <div class="col-lg-8">
+                <form id="form">
+                <div class="mb-3">
+                    <label for="todo" class="form-label">ToDo</label>
+                    <input type="text" class="form-control" id="todoUserInput" placeholder="Todo">
+                    <button type="submit" class="btn btn-primary">Create</button>
+                </div>
+            </form>
+            </div>
+            <div class="col-lg-2"></div>
+        </div>
+        <div class="row">
+            <div class="col-lg-2"></div>
+            <div class="col-lg-8">
+                <ul class="list-group" id="display">
+                </ul>
+            </div>
+            <div class="col-lg-2"></div>
+        </div>
+        <div class="container"></div>
+        <div class="row">
+            <div class="col-lg-2"></div>
+            <div class="col-lg-8">
+                <div class="alert" role="alert" id="message">
+                    A simple danger alert—check it out!
+                  </div>
+            </div>
+            <div class="col-lg-2"></div>
+        </div>
+       
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+
+    <script>
+        $(document).ready(()=>{
+            
+            const display=$("#display");
+            const form=$("#form");
+            const message = $("#message");
+            message.hide();
+            const todoUserInput=$("#todoUserInput");
+            console.log("Document is ready...");
+             
+
+            const displayMessage =(flag,msg)=>{
+                if(flag){
+                    message.removeClass('alert-danger');
+                    message.addClass('alert-success');
+                    message.html(msg);
+                    message.show();
+                }
+                else {
+                    message.removeClass('alert-success');
+                    message.addClass('alert-danger');
+                    message.html(msg);
+                    message.show();
+                }
+            }
+
+            const resetTodosInput =()=>{
+                todoUserInput.val('');
+            };
+
+            const deleteTodo=(todo,listItemID,deleteID)=>{
+                let deleteBtn = $(`#${deleteID}`);
+                deleteBtn.click(()=>{
+                    fetch(`/${todo._id}`,{method:"delete"})
+                    .then((response)=>{
+                        return response.json();
+                    }).then((data)=>{
+                        if(data.ok==1){
+                            $(`#${listItemID}`).remove();
+                            message.hide();
+                        }
+                    });
+                });
+            };
+            const editTodo = (todo,todoID,editID)=>{
+                let editBtn = $(`#${editID}`);
+                editBtn.click(()=>{
+                    console.log("EDITTODO FETCH");
+                    fetch(`/${todo._id}`,{
+                        method:"put",
+                        headers:{
+                            "Content-Type" : "application/json;charset=utf-8",
+                        },
+                        body : JSON.stringify({todo:todoUserInput.val()})
+                    }).then((response)=>{
+                        console.log("response Edit");
+                        return response.json();
+                    }).then((data)=>{
+                        console.log("Data in edit : ", data);
+                        if(data.result.ok==1){
+                            let todoIndex = $(`#${todoID}`);
+                            console.log(todoIndex);
+                            todoIndex.html(data.result.value.todo);
+                            displayMessage(true,data.msg);
+                            resetTodosInput();
+                        }
+                    }).catch((err)=>{
+                        displayMessage(false,"Invalid Input");
+                    });
+                });
+
+            }
+            const getTodos =()=>{
+                console.log("FETCH");
+                fetch('/getTodos',{method : "get"}).then((response)=>{
+                        return response.json();
+                }).then((data)=>{
+                    console.log(data);
+                    displayTodos(data);
+                });
+            };
+            getTodos();
+            
+          
+            const buildIDS = (todo)=>{
+                return {
+                    editID:"edit_"+todo._id,
+                    deleteID : "delete_"+todo._id,
+                    listItemID:"listItem_"+todo._id,
+                    todoID:"todo_"+todo._id
+                }
+            };
+            const buildTemplate =(todo,ids)=>{
+                console.log("Build Template");
+                return `<li class="list-group-item" id="${ids.listItemID}">
+                    <div class="row">
+                        <div class="col-md-4" id="${ids.todoID}">${todo.todo}</div>
+                        <div class="col-md-4"></div>
+                        <div class="col-md-4 text-right">
+                            <button type="button" class="btn btn-secondary" id="${ids.editID}">Edit</button>    
+                            <button type="button" class="btn btn-danger" id="${ids.deleteID}">Delete</button>    
+                        </div>
+                    <div>
+                    </li>`;
+            };
+            const displayTodos = (data)=>{
+                data.forEach((todo)=>{
+                    let ids=buildIDS(todo);
+                    display.append(buildTemplate(todo,ids));
+                    editTodo(todo,ids.todoID,ids.editID);
+                    deleteTodo(todo,ids.listItemID,ids.deleteID);
+                });
+            }
+            form.submit((e)=>{
+              e.preventDefault();
+              console.log("FORM SUBMIT FETCH");
+              fetch('/',{
+                  method :'post',
+                  body: JSON.stringify({todo:todoUserInput.val()}),
+                  headers:{
+                      "Content-Type" : "application/json;charset=utf-8"
+                  }
+              }).then((response)=>{
+                  console.log("Response OK");
+                  console.log(response);
+                  return response.json();
+              }).then((data)=>{
+                  console.log(data);
+                  if(!data.error){
+                        console.log("Hata yok");
+                        if(data.result.acknowledged){
+                        console.log("display");
+                        let ids=buildIDS(data.document);
+                        console.log(ids);
+                        display.append(buildTemplate(data.document,ids));
+                        editTodo(data.document,ids.todoID, ids.editID);
+                        deleteTodo(data.document,ids.listItemID,ids.deleteID);
+                        displayMessage(true,data.msg);
+                        }                
+                  }
+                  else 
+                      displayMessage(false,data.error.message);
+                      console.log("Hata var");
+                        resetTodosInput();
+              });
+            });
+        });
+    </script>
+  </body>
+</html>
